@@ -112,11 +112,19 @@ int main (int argc, const char * argv[]) {
     OGRPolygon *polygon = (OGRPolygon *)flatgeom;
     for (int curp = 0; curp < polygon->getExteriorRing()->getNumPoints(); ++curp) 
       polygon->getExteriorRing()->setPoint(curp, polygon->getExteriorRing()->getX(curp), polygon->getExteriorRing()->getZ(curp), 0);
+    for (int currentRing = 0; currentRing < polygon->getNumInteriorRings(); ++currentRing) {
+      for (int curp = 0; curp < polygon->getInteriorRing(currentRing)->getNumPoints(); ++curp)
+        polygon->getInteriorRing(currentRing)->setPoint(curp, polygon->getInteriorRing(currentRing)->getX(curp), polygon->getInteriorRing(currentRing)->getZ(curp), 0);
+    }
   }
   else if (proj == 0) {
     OGRPolygon *polygon = (OGRPolygon *)geometry;
     for (int curp = 0; curp < polygon->getExteriorRing()->getNumPoints(); ++curp)
       polygon->getExteriorRing()->setPoint(curp, polygon->getExteriorRing()->getY(curp), polygon->getExteriorRing()->getZ(curp), 0);
+    for (int currentRing = 0; currentRing < polygon->getNumInteriorRings(); ++currentRing) {
+      for (int curp = 0; curp < polygon->getInteriorRing(currentRing)->getNumPoints(); ++curp)
+        polygon->getInteriorRing(currentRing)->setPoint(curp, polygon->getInteriorRing(currentRing)->getY(curp), polygon->getInteriorRing(currentRing)->getZ(curp), 0);
+    }
   }
   flatgeom->flattenTo2D();
 //  std::cout << "geom: " << geometry->getCoordinateDimension() << std::endl;
@@ -131,31 +139,44 @@ int main (int argc, const char * argv[]) {
   if (proj == 2) {
     Triangulationxy triangulation;
     triangulateandtag_xy(geometry, triangulation);
+    for (Triangulationxy::Finite_faces_iterator currentFace = triangulation.finite_faces_begin(); currentFace != triangulation.finite_faces_end(); ++currentFace) {
+      std::cout << "--triangle--" << std::endl;
+      Point p = currentFace->vertex(0)->point();
+      std::cout << p.x() << ", " << p.y() << ", " << p.z() << std::endl;
+      p = currentFace->vertex(1)->point();
+      std::cout << p.x() << ", " << p.y() << ", " << p.z() << std::endl;
+      p = currentFace->vertex(2)->point();
+      std::cout << p.x() << ", " << p.y() << ", " << p.z() << std::endl;
+    }
   }
   else if (proj == 1) {
     Triangulationxz triangulation;
     triangulateandtag_xz(geometry, triangulation);
+    for (Triangulationxz::Finite_faces_iterator currentFace = triangulation.finite_faces_begin(); currentFace != triangulation.finite_faces_end(); ++currentFace) {
+      std::cout << "--triangle--" << std::endl;
+      Point p = currentFace->vertex(0)->point();
+      std::cout << p.x() << ", " << p.y() << ", " << p.z() << std::endl;
+      p = currentFace->vertex(1)->point();
+      std::cout << p.x() << ", " << p.y() << ", " << p.z() << std::endl;
+      p = currentFace->vertex(2)->point();
+      std::cout << p.x() << ", " << p.y() << ", " << p.z() << std::endl;
+    }
   }
   else { //-- proj == 0
     Triangulationyz triangulation;
     triangulateandtag_yz(geometry, triangulation);    
+    for (Triangulationyz::Finite_faces_iterator currentFace = triangulation.finite_faces_begin(); currentFace != triangulation.finite_faces_end(); ++currentFace) {
+      std::cout << "--triangle--" << std::endl;
+      Point p = currentFace->vertex(0)->point();
+      std::cout << p.x() << ", " << p.y() << ", " << p.z() << std::endl;
+      p = currentFace->vertex(1)->point();
+      std::cout << p.x() << ", " << p.y() << ", " << p.z() << std::endl;
+      p = currentFace->vertex(2)->point();
+      std::cout << p.x() << ", " << p.y() << ", " << p.z() << std::endl;
+    }
   }
      
-  
   return 0;
-//  
-//  OGRMultiPolygon* outputPolygons = repair(geometry);
-//  
-//  if (outputPolygons == NULL) {
-//    std::cout << "Impossible to repair the polygon: input points are collinear (no area given)." << std::endl;
-//    return 0;
-//  }
-//  else {
-//    char *outputWKT;
-//    outputPolygons->exportToWkt(&outputWKT);
-//    std::cout << std::endl << "Repaired polygon:" << std::endl << outputWKT << std::endl;
-//    return 0;
-//  }
 }
 
 
