@@ -17,25 +17,46 @@
 #include <CGAL/Projection_traits_xz_3.h>
 #include <CGAL/Projection_traits_yz_3.h>
 
-typedef CGAL::Exact_predicates_inexact_constructions_kernel Kepic;
-
-typedef CGAL::Projection_traits_xy_3<Kepic>  K;
-
-typedef CGAL::Triangulation_vertex_base_2<K> VB;
-typedef CGAL::Constrained_triangulation_face_base_2<K> FB;
-typedef CGAL::Triangulation_face_base_with_info_2<void *, K, FB> FBWI;
-typedef CGAL::Triangulation_data_structure_2<VB, FBWI> TDS;
+typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
 typedef CGAL::Exact_predicates_tag PT;
 typedef CGAL::Exact_intersections_tag IT;
-typedef CGAL::Constrained_Delaunay_triangulation_2<K, TDS, PT> CDT;
+typedef K::Point_3   Point;
+//typedef Triangulation::Point Point;
 
-typedef CGAL::Constrained_triangulation_plus_2<CDT> Triangulation;
-typedef Triangulation::Point Point;
+typedef CGAL::Projection_traits_xy_3<K>  Kxy;
+typedef CGAL::Triangulation_vertex_base_2<Kxy> VBxy;
+typedef CGAL::Constrained_triangulation_face_base_2<Kxy> FBxy;
+typedef CGAL::Triangulation_face_base_with_info_2<void *, Kxy, FBxy> FBWIxy;
+typedef CGAL::Triangulation_data_structure_2<VBxy, FBWIxy> TDSxy;
+typedef CGAL::Constrained_Delaunay_triangulation_2<Kxy, TDSxy, PT> CDTxy;
+typedef CGAL::Constrained_triangulation_plus_2<CDTxy> Triangulationxy;
 
-bool  triangulateandtag(OGRGeometry* geometry, Triangulation &triangulation);
+typedef CGAL::Projection_traits_xz_3<K>  Kxz;
+typedef CGAL::Triangulation_vertex_base_2<Kxz> VBxz;
+typedef CGAL::Constrained_triangulation_face_base_2<Kxz> FBxz;
+typedef CGAL::Triangulation_face_base_with_info_2<void *, Kxz, FBxz> FBWIxz;
+typedef CGAL::Triangulation_data_structure_2<VBxz, FBWIxz> TDSxz;
+typedef CGAL::Constrained_Delaunay_triangulation_2<Kxz, TDSxz, PT> CDTxz;
+typedef CGAL::Constrained_triangulation_plus_2<CDTxz> Triangulationxz;
+
+typedef CGAL::Projection_traits_yz_3<K>  Kyz;
+typedef CGAL::Triangulation_vertex_base_2<Kyz> VByz;
+typedef CGAL::Constrained_triangulation_face_base_2<Kyz> FByz;
+typedef CGAL::Triangulation_face_base_with_info_2<void *, Kyz, FByz> FBWIyz;
+typedef CGAL::Triangulation_data_structure_2<VByz, FBWIyz> TDSyz;
+typedef CGAL::Constrained_Delaunay_triangulation_2<Kyz, TDSyz, PT> CDTyz;
+typedef CGAL::Constrained_triangulation_plus_2<CDTyz> Triangulationyz;
+
+
+//-- prototypes
+bool  triangulateandtag_xy(OGRGeometry* geometry, Triangulationxy &triangulation);
+void  tag_xy(Triangulationxy &triangulation, void *interiorHandle, void *exteriorHandle);
+bool  triangulateandtag_xz(OGRGeometry* geometry, Triangulationxz &triangulation);
+void  tag_xz(Triangulationxz &triangulation, void *interiorHandlez, void *exteriorHandle);
+bool  triangulateandtag_yz(OGRGeometry* geometry, Triangulationyz &triangulation);
+void  tag_yz(Triangulationyz &triangulation, void *interiorHandle, void *exteriorHandle);
+
 int   get_projection_plane(OGRGeometry* geometry);
-void  tag(Triangulation &triangulation, void *interiorHandle, void *exteriorHandle);
-
 
 
 
@@ -107,9 +128,18 @@ int main (int argc, const char * argv[]) {
     return 1;
   }
   
-  
-  Triangulation triangulation;
-  triangulateandtag(geometry, triangulation);
+  if (proj == 2) {
+    Triangulationxy triangulation;
+    triangulateandtag_xy(geometry, triangulation);
+  }
+  else if (proj == 1) {
+    Triangulationxz triangulation;
+    triangulateandtag_xz(geometry, triangulation);
+  }
+  else { //-- proj == 0
+    Triangulationyz triangulation;
+    triangulateandtag_yz(geometry, triangulation);    
+  }
      
   
   return 0;
@@ -135,7 +165,7 @@ int get_projection_plane(OGRGeometry* geometry) {
   //-- xy plane
   int proj = 2;
   double projarea = (envelope.MaxX - envelope.MinX) * (envelope.MaxY - envelope.MinY);
-  //-- xz plane
+  //-- yz plane
   double temp = (envelope.MaxX - envelope.MinX) * (envelope.MaxZ - envelope.MinZ);
   if ( temp > projarea) {
     proj = 1;
@@ -150,8 +180,7 @@ int get_projection_plane(OGRGeometry* geometry) {
 }
 
 
-bool triangulateandtag(OGRGeometry* geometry, Triangulation &triangulation) {
-  
+bool triangulateandtag_xy(OGRGeometry* geometry, Triangulationxy &triangulation) {
   OGRPolygon *polygon = (OGRPolygon *)geometry;
   for (int currentPoint = 0; currentPoint < polygon->getExteriorRing()->getNumPoints(); ++currentPoint) {
     triangulation.insert_constraint(Point(polygon->getExteriorRing()->getX(currentPoint), 
@@ -179,56 +208,216 @@ bool triangulateandtag(OGRGeometry* geometry, Triangulation &triangulation) {
   // Tag
   void *interior = malloc(sizeof(void *));
   void *exterior = malloc(sizeof(void *));
-  tag(triangulation, interior, exterior);
+  tag_xy(triangulation, interior, exterior);
   
   return true;
 }
-
-
-void tag(Triangulation &triangulation, void *interiorHandle, void *exteriorHandle) {
+void tag_xy(Triangulationxy &triangulation, void *interiorHandle, void *exteriorHandle) {
 	
-    // Clean tags
-    for (Triangulation::Face_handle currentFace = triangulation.all_faces_begin(); currentFace != triangulation.all_faces_end(); ++currentFace)
-        currentFace->info() = NULL;
+  // Clean tags
+  for (Triangulationxy::Face_handle currentFace = triangulation.all_faces_begin(); currentFace != triangulation.all_faces_end(); ++currentFace)
+    currentFace->info() = NULL;
+  
+  // Initialise tagging
+  std::stack<Triangulationxy::Face_handle> interiorStack, exteriorStack;
+  exteriorStack.push(triangulation.infinite_face());
+  std::stack<Triangulationxy::Face_handle> *currentStack = &exteriorStack;
+  std::stack<Triangulationxy::Face_handle> *dualStack = &interiorStack;
+  void *currentHandle = exteriorHandle;
+  void *dualHandle = interiorHandle;
+  
+  // Until we finish
+  while (!interiorStack.empty() || !exteriorStack.empty()) {
     
-    // Initialise tagging
-    std::stack<Triangulation::Face_handle> interiorStack, exteriorStack;
-    exteriorStack.push(triangulation.infinite_face());
-    std::stack<Triangulation::Face_handle> *currentStack = &exteriorStack;
-    std::stack<Triangulation::Face_handle> *dualStack = &interiorStack;
-    void *currentHandle = exteriorHandle;
-    void *dualHandle = interiorHandle;
-    
-    // Until we finish
-    while (!interiorStack.empty() || !exteriorStack.empty()) {
-        
-        // Give preference to whatever we're already doing
-        while (!currentStack->empty()) {
-            Triangulation::Face_handle currentFace = currentStack->top();
+    // Give preference to whatever we're already doing
+    while (!currentStack->empty()) {
+      Triangulationxy::Face_handle currentFace = currentStack->top();
 			currentStack->pop();
-            if (currentFace->info() != NULL) continue;
+      if (currentFace->info() != NULL) continue;
 			currentFace->info() = currentHandle;
-            for (int currentEdge = 0; currentEdge < 3; ++currentEdge) {
-                if (currentFace->neighbor(currentEdge)->info() == NULL)
-                    if (currentFace->is_constrained(currentEdge)) dualStack->push(currentFace->neighbor(currentEdge));
-                else currentStack->push(currentFace->neighbor(currentEdge));
-            }
-        }
-			
-        // Flip
-        if (currentHandle == exteriorHandle) {
-            currentHandle = interiorHandle;
-            dualHandle = exteriorHandle;
-            currentStack = &interiorStack;
-            dualStack = &exteriorStack;
-        } else {
-            currentHandle = exteriorHandle;
-            dualHandle = interiorHandle;
-            currentStack = &exteriorStack;
-            dualStack = &interiorStack;
-        }
+      for (int currentEdge = 0; currentEdge < 3; ++currentEdge) {
+        if (currentFace->neighbor(currentEdge)->info() == NULL)
+          if (currentFace->is_constrained(currentEdge)) dualStack->push(currentFace->neighbor(currentEdge));
+          else currentStack->push(currentFace->neighbor(currentEdge));
+      }
+    }
+    
+    // Flip
+    if (currentHandle == exteriorHandle) {
+      currentHandle = interiorHandle;
+      dualHandle = exteriorHandle;
+      currentStack = &interiorStack;
+      dualStack = &exteriorStack;
+    } else {
+      currentHandle = exteriorHandle;
+      dualHandle = interiorHandle;
+      currentStack = &exteriorStack;
+      dualStack = &interiorStack;
+    }
 	}
 }
+
+///////////////////////
+
+
+bool triangulateandtag_xz(OGRGeometry* geometry, Triangulationxz &triangulation) {
+  OGRPolygon *polygon = (OGRPolygon *)geometry;
+  for (int currentPoint = 0; currentPoint < polygon->getExteriorRing()->getNumPoints(); ++currentPoint) {
+    triangulation.insert_constraint(Point(polygon->getExteriorRing()->getX(currentPoint), 
+                                          polygon->getExteriorRing()->getY(currentPoint),
+                                          polygon->getExteriorRing()->getZ(currentPoint)),
+                                    Point(polygon->getExteriorRing()->getX((currentPoint+1)%polygon->getExteriorRing()->getNumPoints()), 
+                                          polygon->getExteriorRing()->getY((currentPoint+1)%polygon->getExteriorRing()->getNumPoints()),
+                                          polygon->getExteriorRing()->getZ((currentPoint+1)%polygon->getExteriorRing()->getNumPoints())));
+  } 
+  for (int currentRing = 0; currentRing < polygon->getNumInteriorRings(); ++currentRing) {
+    for (int currentPoint = 0; currentPoint < polygon->getInteriorRing(currentRing)->getNumPoints(); ++currentPoint)
+      triangulation.insert_constraint(Point(polygon->getInteriorRing(currentRing)->getX(currentPoint), 
+                                            polygon->getInteriorRing(currentRing)->getY(currentPoint),
+                                            polygon->getInteriorRing(currentRing)->getZ(currentPoint)),
+                                      Point(polygon->getInteriorRing(currentRing)->getX((currentPoint+1)%polygon->getInteriorRing(currentRing)->getNumPoints()), 
+                                            polygon->getInteriorRing(currentRing)->getY((currentPoint+1)%polygon->getInteriorRing(currentRing)->getNumPoints()),
+                                            polygon->getInteriorRing(currentRing)->getZ((currentPoint+1)%polygon->getInteriorRing(currentRing)->getNumPoints())));
+  }
+  
+  std::cout << "Triangulation: " << triangulation.number_of_faces() << " faces, " << triangulation.number_of_vertices() << " vertices." << std::endl;
+  if (triangulation.number_of_faces() < 1) {
+    return NULL;
+  }
+  
+  // Tag
+  void *interior = malloc(sizeof(void *));
+  void *exterior = malloc(sizeof(void *));
+  tag_xz(triangulation, interior, exterior);
+  
+  return true;
+}
+void tag_xz(Triangulationxz &triangulation, void *interiorHandle, void *exteriorHandle) {
+	
+  // Clean tags
+  for (Triangulationxz::Face_handle currentFace = triangulation.all_faces_begin(); currentFace != triangulation.all_faces_end(); ++currentFace)
+    currentFace->info() = NULL;
+  
+  // Initialise tagging
+  std::stack<Triangulationxz::Face_handle> interiorStack, exteriorStack;
+  exteriorStack.push(triangulation.infinite_face());
+  std::stack<Triangulationxz::Face_handle> *currentStack = &exteriorStack;
+  std::stack<Triangulationxz::Face_handle> *dualStack = &interiorStack;
+  void *currentHandle = exteriorHandle;
+  void *dualHandle = interiorHandle;
+  
+  // Until we finish
+  while (!interiorStack.empty() || !exteriorStack.empty()) {
+    
+    // Give preference to whatever we're already doing
+    while (!currentStack->empty()) {
+      Triangulationxz::Face_handle currentFace = currentStack->top();
+			currentStack->pop();
+      if (currentFace->info() != NULL) continue;
+			currentFace->info() = currentHandle;
+      for (int currentEdge = 0; currentEdge < 3; ++currentEdge) {
+        if (currentFace->neighbor(currentEdge)->info() == NULL)
+          if (currentFace->is_constrained(currentEdge)) dualStack->push(currentFace->neighbor(currentEdge));
+          else currentStack->push(currentFace->neighbor(currentEdge));
+      }
+    }
+    
+    // Flip
+    if (currentHandle == exteriorHandle) {
+      currentHandle = interiorHandle;
+      dualHandle = exteriorHandle;
+      currentStack = &interiorStack;
+      dualStack = &exteriorStack;
+    } else {
+      currentHandle = exteriorHandle;
+      dualHandle = interiorHandle;
+      currentStack = &exteriorStack;
+      dualStack = &interiorStack;
+    }
+	}
+}
+
+
+///////////////////////
+
+
+bool triangulateandtag_yz(OGRGeometry* geometry, Triangulationyz &triangulation) {
+  OGRPolygon *polygon = (OGRPolygon *)geometry;
+  for (int currentPoint = 0; currentPoint < polygon->getExteriorRing()->getNumPoints(); ++currentPoint) {
+    triangulation.insert_constraint(Point(polygon->getExteriorRing()->getX(currentPoint), 
+                                          polygon->getExteriorRing()->getY(currentPoint),
+                                          polygon->getExteriorRing()->getZ(currentPoint)),
+                                    Point(polygon->getExteriorRing()->getX((currentPoint+1)%polygon->getExteriorRing()->getNumPoints()), 
+                                          polygon->getExteriorRing()->getY((currentPoint+1)%polygon->getExteriorRing()->getNumPoints()),
+                                          polygon->getExteriorRing()->getZ((currentPoint+1)%polygon->getExteriorRing()->getNumPoints())));
+  } 
+  for (int currentRing = 0; currentRing < polygon->getNumInteriorRings(); ++currentRing) {
+    for (int currentPoint = 0; currentPoint < polygon->getInteriorRing(currentRing)->getNumPoints(); ++currentPoint)
+      triangulation.insert_constraint(Point(polygon->getInteriorRing(currentRing)->getX(currentPoint), 
+                                            polygon->getInteriorRing(currentRing)->getY(currentPoint),
+                                            polygon->getInteriorRing(currentRing)->getZ(currentPoint)),
+                                      Point(polygon->getInteriorRing(currentRing)->getX((currentPoint+1)%polygon->getInteriorRing(currentRing)->getNumPoints()), 
+                                            polygon->getInteriorRing(currentRing)->getY((currentPoint+1)%polygon->getInteriorRing(currentRing)->getNumPoints()),
+                                            polygon->getInteriorRing(currentRing)->getZ((currentPoint+1)%polygon->getInteriorRing(currentRing)->getNumPoints())));
+  }
+  
+  std::cout << "Triangulation: " << triangulation.number_of_faces() << " faces, " << triangulation.number_of_vertices() << " vertices." << std::endl;
+  if (triangulation.number_of_faces() < 1) {
+    return NULL;
+  }
+  
+  // Tag
+  void *interior = malloc(sizeof(void *));
+  void *exterior = malloc(sizeof(void *));
+  tag_yz(triangulation, interior, exterior);
+  
+  return true;
+}
+void tag_yz(Triangulationyz &triangulation, void *interiorHandle, void *exteriorHandle) {
+	
+  // Clean tags
+  for (Triangulationyz::Face_handle currentFace = triangulation.all_faces_begin(); currentFace != triangulation.all_faces_end(); ++currentFace)
+    currentFace->info() = NULL;
+  
+  // Initialise tagging
+  std::stack<Triangulationyz::Face_handle> interiorStack, exteriorStack;
+  exteriorStack.push(triangulation.infinite_face());
+  std::stack<Triangulationyz::Face_handle> *currentStack = &exteriorStack;
+  std::stack<Triangulationyz::Face_handle> *dualStack = &interiorStack;
+  void *currentHandle = exteriorHandle;
+  void *dualHandle = interiorHandle;
+  
+  // Until we finish
+  while (!interiorStack.empty() || !exteriorStack.empty()) {
+    
+    // Give preference to whatever we're already doing
+    while (!currentStack->empty()) {
+      Triangulationyz::Face_handle currentFace = currentStack->top();
+			currentStack->pop();
+      if (currentFace->info() != NULL) continue;
+			currentFace->info() = currentHandle;
+      for (int currentEdge = 0; currentEdge < 3; ++currentEdge) {
+        if (currentFace->neighbor(currentEdge)->info() == NULL)
+          if (currentFace->is_constrained(currentEdge)) dualStack->push(currentFace->neighbor(currentEdge));
+          else currentStack->push(currentFace->neighbor(currentEdge));
+      }
+    }
+    
+    // Flip
+    if (currentHandle == exteriorHandle) {
+      currentHandle = interiorHandle;
+      dualHandle = exteriorHandle;
+      currentStack = &interiorStack;
+      dualStack = &exteriorStack;
+    } else {
+      currentHandle = exteriorHandle;
+      dualHandle = interiorHandle;
+      currentStack = &exteriorStack;
+      dualStack = &interiorStack;
+    }
+	}
+}
+
 
 
 
